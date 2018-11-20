@@ -86,16 +86,25 @@ hisp_voters <- full_data %>%
   group_by(district, race_educ5) %>% 
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
-  clean_names() 
+  clean_names() %>% 
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
 
-hisp_voters <- na.omit(hisp_voters)
+#hisp_voters <- na.omit(hisp_voters)
+
+hisp_voters %>% 
+  ggplot(aes(x = hispanic_hs, y = dem_win)) + geom_jitter()
+
+hisp_voters
 
 asian_voters <- full_data %>% 
   filter(race_eth == "Asian") %>% 
   group_by(district, race_educ5) %>% 
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
-  clean_names() 
+  clean_names() %>% 
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
 
 asian_voters <- na.omit(asian_voters)
 
@@ -104,7 +113,9 @@ white_voters <- full_data %>%
   group_by(district, race_educ5) %>% 
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
-  clean_names() 
+  clean_names() %>% 
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
 
 white_voters <- na.omit(white_voters)
 
@@ -113,10 +124,11 @@ other_voters <- full_data %>%
   group_by(district, race_educ5) %>% 
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
-  clean_names() 
+  clean_names() %>% 
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
 
 other_voters <- na.omit(other_voters)
-
 
 
 
