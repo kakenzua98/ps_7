@@ -1,0 +1,124 @@
+---
+title: "ps_7"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE)
+library(tidyverse)
+library(stringr)
+library(fs)
+library(scales)
+library(lubridate)
+library(dplyr)
+library(knitr)
+library(tibble)
+library(foreign)
+library(kableExtra)
+library(formattable)
+library(readxl)
+library(readr)
+library(janitor)
+library(tibble)
+library(purrr)
+library(ggplot2)
+
+
+dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>% 
+  clean_names() %>% 
+  select(x_1, dem_votes, rep_votes, other_votes, type) %>% 
+  rename(district = x_1) %>% 
+  mutate(district = tolower(district)) %>% 
+  mutate(dem_win = (dem_votes - rep_votes)/(rep_votes+dem_votes+other_votes)) %>% 
+  select(district, dem_win, type) %>% 
+  filter(type != "Senate") %>% 
+  filter(type != "Governor") %>% 
+  filter(!is.na(dem_win))
+
+
+download.file(url = "https://goo.gl/ZRCBda",
+              destfile = "upshot.zip", 
+              quiet = TRUE,
+              mode = "wb")
+
+unzip("upshot.zip") 
+
+file_names <- dir_ls("2018-live-poll-results-master/data/")
+
+prediction_data <- map_dfr(file_names, read_csv, .id = "source") %>% 
+  mutate(source = str_replace(source, "2018-live-poll-results-master/data/elections-poll-","\\")) %>% 
+  mutate(source = str_replace(source, ".csv","\\")) %>% 
+  separate(source, c("role","wave"), "-") %>% 
+  select(role, wave, race_eth, educ4, final_weight) %>% 
+  filter(race_eth != "[DO NOT READ] Don't know/Refused") %>% 
+  filter(educ4 != "[DO NOT READ] Don't know/Refused") %>% 
+  mutate(educ4 = case_when(educ4 == "Postgraduate Degree" ~ "Postgrad",
+                           educ4 == "4-year College Grad." ~ "College grad",
+                           educ4 == "Some College Educ." ~ "Some College",
+                           educ4 == "High School Grad. or Less" ~ "HS")) %>% 
+  mutate(race_educ5 = paste(race_eth, educ4, sep = ", ")) %>% 
+  rename(district = role)
+  
+full_data <- prediction_data %>%   
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
+  # is this calculation necessary or correct?
+ 
+
+black_voters <- full_data %>% 
+  filter(race_eth == "Black") %>% 
+  group_by(district, race_educ5) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = race_educ5, value = n) %>% 
+  # NOT CERTAIN WHAT THE VALUES HERE ACTUALLY ARE
+  clean_names() %>% 
+  left_join(dem_win, by = "district") %>% 
+  filter(!is.na(type)) 
+
+
+black_voters %>% 
+  ggplot(aes(x = black_hs, y = dem_win)) + geom_jitter()
+
+black_voters
+
+hisp_voters <- full_data %>% 
+  filter(race_eth == "Hispanic") %>% 
+  group_by(district, race_educ5) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = race_educ5, value = n) %>% 
+  clean_names() 
+
+hisp_voters <- na.omit(hisp_voters)
+
+asian_voters <- full_data %>% 
+  filter(race_eth == "Asian") %>% 
+  group_by(district, race_educ5) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = race_educ5, value = n) %>% 
+  clean_names() 
+
+asian_voters <- na.omit(asian_voters)
+
+white_voters <- full_data %>% 
+  filter(race_eth == "White") %>% 
+  group_by(district, race_educ5) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = race_educ5, value = n) %>% 
+  clean_names() 
+
+white_voters <- na.omit(white_voters)
+
+other_voters <- full_data %>% 
+  filter(race_eth == "Other") %>% 
+  group_by(district, race_educ5) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = race_educ5, value = n) %>% 
+  clean_names() 
+
+other_voters <- na.omit(other_voters)
+
+
+
+
+```
+
