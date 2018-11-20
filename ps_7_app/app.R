@@ -11,6 +11,7 @@ library(tidyverse)
 library(shiny)
 
 black_voters <- read_rds("black_voters.rds")
+all_voters <- read_rds("all_voters.rds")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -21,13 +22,20 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
+       selectInput(inputId = "educ",
+                   label = "Education:",
+                   choices = c("college_grad",
+                              "hs",
+                              "postgrad",
+                              "some_college"),
+                   selected = "hs"),
        selectInput(inputId = "race",
                    label = "Race:",
-                   choices = c("black_college_grad",
-                              "black_hs",
-                              "black_postgrad",
-                              "black_some_college"),
-                   selected = "black_hs"),
+                   choices = c("black",
+                               "hisp",
+                               "white",
+                               "other"),
+                   selected = "black"),
       checkboxInput(inputId = "line", 
                     label = "Show Best Fit Line", 
                     value = FALSE)
@@ -57,19 +65,19 @@ server <- function(input, output) {
     
    #if(input$eth == "Black") {
       
-      black_plot <- black_voters %>% 
+      all_plot <- all_voters %>% 
         #filter(!is.na(input$type)) %>% 
-        ggplot(aes_string(x = input$race, y = "dem_win")) + geom_point() + ylab("Dem Win")
+        ggplot(aes_string(x = paste(input$race, input$educ, sep = "_"), y = "dem_win")) + geom_point() + ylab("Dem Win")
       
       #black_plot <- black_voters %>% 
       #  filter(!is.na(black_college_grad)) %>% 
       #  ggplot(aes(x = black_college_grad, y = dem_win)) + geom_point() + ylab("Dem Win")
       
       if (input$line == TRUE) {
-        black_plot <- black_plot + geom_smooth(method = lm, se = FALSE)
+        all_plot <- all_plot + geom_smooth(method = lm, se = FALSE)
       }
       
-      black_plot
+      all_plot
       
     #}
     

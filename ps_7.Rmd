@@ -48,6 +48,7 @@ unzip("upshot.zip")
 
 file_names <- dir_ls("2018-live-poll-results-master/data/")
 polling_data <- map_dfr(file_names, read_csv, .id = "source")
+  
 
 prediction_data <- polling_data %>% 
   mutate(source = str_replace(source, "2018-live-poll-results-master/data/elections-poll-","\\")) %>% 
@@ -133,6 +134,17 @@ other_voters <- full_data %>%
   filter(!is.na(type)) 
 
 other_voters <- na.omit(other_voters)
+
+all_voters <- black_voters %>% 
+  left_join(white_voters, by = "district") %>% 
+  left_join(hisp_voters, by = "district") %>% 
+  left_join(asian_voters, by = "district") %>% 
+  left_join(other_voters, by = "district") 
+
+all_voters <- na.omit(all_voters)
+
+
+write_rds(all_voters, "ps_7_app/all_voters.rds")
 
 
 
