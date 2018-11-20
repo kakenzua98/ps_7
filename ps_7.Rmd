@@ -25,20 +25,6 @@ library(ggplot2)
 
 # *****may want to create a variable that's like dem_adv - dem_win to adhere to prompt*****
 
-dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>% 
-  clean_names() %>% 
-  select(x_1, dem_votes, rep_votes, other_votes, type) %>% 
-  rename(district = x_1) %>% 
-  mutate(district = tolower(district)) %>% 
-  mutate(dem_win = (dem_votes - rep_votes)/(rep_votes+dem_votes+other_votes)) %>% 
-  select(district, dem_win, type) %>% 
-  filter(type != "Senate") %>% 
-  filter(type != "Governor") %>% 
-  filter(!is.na(dem_win))
-
-
-
-
 download.file(url = "https://goo.gl/ZRCBda",
               destfile = "upshot.zip", 
               quiet = TRUE,
@@ -48,6 +34,44 @@ unzip("upshot.zip")
 
 file_names <- dir_ls("2018-live-poll-results-master/data/")
 polling_data <- map_dfr(file_names, read_csv, .id = "source")
+
+
+dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>% 
+  clean_names() %>% 
+  select(x_1, dem_votes, rep_votes, other_votes, type) %>% 
+  rename(district = x_1) %>% 
+  mutate(district = tolower(district)) %>% 
+  mutate(dem_win = (dem_votes)/(rep_votes+dem_votes+other_votes)) %>% 
+  select(district, dem_win, type) %>% 
+  filter(type != "Senate") %>% 
+  filter(type != "Governor") %>% 
+  filter(!is.na(dem_win))
+
+dem_polling <- polling_data %>% 
+  select(source, response, final_weight) %>% 
+  mutate(state = str_sub(source, 51, 52)) %>%
+  mutate(wave = str_extract(source, pattern = "[\\d].csv$")) %>% 
+  mutate(wave = parse_integer(str_sub(wave, 1, 1))) %>% 
+  mutate(office = case_when(str_detect(source, pattern = "sen") ~ "SEN",
+                            str_detect(source, pattern = "gov") ~ "GOV",
+                            TRUE ~ "HSE")) %>% 
+  filter(office != "SEN") %>% 
+  filter(office != "GOV") %>% 
+  mutate(district = str_extract(source, pattern = "[\\d]{2}-[\\d].csv$")) %>% 
+  mutate(district = str_sub(district, 1, 2)) %>% 
+  mutate(District = paste(state, district, sep = "")) %>%  
+  select(District, response, final_weight, wave) %>% 
+  filter(wave %in% c("2","3")) %>% 
+  rename(district = District) %>% 
+  filter(district != "pa01") %>% 
+  filter(!(response %in% c("3","4","5","6"))) %>% 
+  group_by(district, response) %>% 
+  tally(wt = final_weight) %>% 
+  spread(key = response, value = n) %>% 
+  mutate(dem_margin = Dem / (Dem+Rep+Und)) %>% 
+  select(district, dem_margin)
+
+
   
 
 prediction_data <- polling_data %>% 
@@ -78,7 +102,12 @@ black_voters <- full_data %>%
   # NOT CERTAIN WHAT THE VALUES HERE ACTUALLY ARE
   clean_names() %>% 
   left_join(dem_win, by = "district") %>% 
-  filter(!is.na(type)) 
+  left_join(dem_polling, by = "district") %>% 
+  filter(!is.na(dem_win)) %>% 
+  filter(!is.na(dem_margin)) %>% 
+  mutate(dem_error = dem_win - dem_margin) %>% 
+  mutate(dem_erro)
+  
 
 
 black_voters %>% 
