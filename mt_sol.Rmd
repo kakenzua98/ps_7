@@ -1,0 +1,554 @@
+```{r}
+Mid-Term #2
+David Kane
+November 6, 2018
+Note
+Most of the errors on this midterm involved producing the wrong output for one or more of the questions; if you fall into this category, please compare your code to the model solutions to see where they differ.
+
+Another point we want to emphasize is that your code must knit whenever we run it. Replicability is something we have emphasized often in this course. As previously noted in the Problem Set 4 and Problem Set 5 solutions, failure to knit is a 2 point penalty.
+
+One way you may have gotten this error is by referencing a local file or directory rather than using a relative path which does not reference anything locally. See the Problem Set 5 solution and previous solutions that involve reading in files if you need a refresher on how this works. Also, if you reference a file that your script does not download, and fail to push that file, it will not knit for others, as noted in the Problem Set 4 solution. Another issue involves including View() commands in your .Rmd, which can prevent knitting on Macs.
+
+We were impressed by your hard work on this midterm and look forward to seeing you apply the skills you learned on the final project!
+
+Question 1
+Intention of voting
+DEM.	REP.	UND.
+Already voted	35%	49%	15%
+Almost certain	43%	46%	10%
+Very likely	42%	30%	22%
+Somewhat likely	29%	23%	31%
+Not very likely	22%	16%	62%
+Not at all likely	30%	15%	46%
+Question 2
+The total number of completed interviews was 48960.
+The total number of Senate polls was 5.
+The total number of House polls was 90.
+The total number of unique states in which a poll was conducted was 27.
+The total number of unique states in which a poll was conducted for a Senate race was 5.
+The total number of unique House districts which were polled was 60.
+The number of House districts which were polled in more than one wave was 30.
+
+Question 3
+Change in Republican Advantage in Districts with Major Swings
+District	Poll 1	Poll 2	Change
+MN-8	-2%	16%	17%
+NJ-3	-10%	1%	11%
+PA-1	-7%	1%	8%
+IA-1	-14%	-7%	8%
+TX-23	8%	15%	8%
+IL-12	1%	9%	8%
+NJ-7	1%	-8%	-9%
+MI-8	3%	-7%	-10%
+IL-14	5%	-5%	-10%
+Question 4
+Preceptorâ€™s Shiny App
+
+Code
+knitr::opts_chunk$set(echo = FALSE)
+
+library(janitor)
+
+library(fs)
+
+library(knitr)
+
+library(tidyverse)
+
+
+
+download.file(url = "https://goo.gl/ZRCBda",
+
+              destfile = "master.zip",
+
+              quiet = TRUE,
+
+              mode = "wb")
+
+
+
+unzip("master.zip")
+
+
+
+# In a production product, we would compare this download to the previous one
+
+# and report any issues. Even though Upshot/Siena is a high quality source,
+
+# everyone makes mistakes. Think about what you might check, using stopifnot().
+
+
+
+# Anyway, let's follow this advice for reading in mutiple files:
+
+
+
+# https://www.gerkelab.com/blog/2018/09/import-directory-csv-purrr-readr/
+
+ 
+
+# Might argue that regexp = "\\.csv$" should be included in the call to dir_ls()
+
+# or that we should start the pipe with just the name of the directory.
+
+
+
+x <- fs::dir_ls("2018-live-poll-results-master/data") %>%
+
+  map_dfr(read_csv, .id = "source") %>%
+
+  
+
+  # Turn out that there are very few variables we actually need. Let's just keep
+
+  # them. For problem set #7, we will probably want to keep more of the
+
+  # variables.
+
+  
+
+  select(source, response, likely, final_weight) %>% 
+
+   
+
+  # The beginnings of the filenames --- which we have now stored in "source" ---
+
+  # are (always?) the same. Then comes a two letter state identifier (wv, ca), a
+
+  # two digit congressional district (03, 49) or "sen" (or "gov") for a Senate
+
+  # (or Govenor) race, a dash, and then a number to indicate which wave (out of
+
+  # three) this poll was a part of. Fortunately, the source names are very
+
+  # consistent. The state identifiers are always the 51st and 52nd character.
+
+   
+
+  mutate(state = toupper(str_sub(source, 51, 52))) %>% 
+
+  
+
+  # The wave is also the number at the end, just before the .csv suffix. (Yes, I
+
+  # could probably turn this into a one-liner, but regular expressions are so
+
+  # confusing (to me) that I find it simpler to just do them step-by-step.)
+
+  
+
+  mutate(wave = str_extract(source, pattern = "[\\d].csv$")) %>% 
+
+  mutate(wave = parse_integer(str_sub(wave, 1, 1))) %>% 
+
+  
+
+  # Trickiest case is that there is one Governor race (in Florida, in the 3rd
+
+  # wave).
+
+  
+
+  mutate(office = case_when(
+
+                      str_detect(source, pattern = "sen") ~ "SEN",
+
+                      str_detect(source, pattern = "gov") ~ "GOV",
+
+                      TRUE ~ "HSE")) %>% 
+
+  
+
+  # Again, there are probably quicker ways to get the district number, but these
+
+  # two steps work fine.
+
+  
+
+  mutate(district = str_extract(source, pattern = "[\\d]{2}-[\\d].csv$")) %>% 
+
+  mutate(district = parse_integer(str_sub(district, 1, 2))) %>% 
+
+  
+
+  # I will need the District (like MA-9) later, so I just create it now. I want
+
+  # District to be NA if the poll is for a Senate or Governor race. It is also
+
+  # handy to have an Office variable, which provides a descriptive name for the
+
+  # election race: state plus office. Maybe I should just use Office everywhere?
+
+  
+
+  mutate(District = paste(state, district, sep = "-")) %>% 
+
+  mutate(District = ifelse(is.na(district), NA, District)) %>% 
+
+  mutate(Office = ifelse(is.na(district), paste(state, office, sep = "-"), District)) 
+
+  
+
+# Always good to keep your workspace clean.
+
+
+
+file_delete(c("master.zip", "2018-live-poll-results-master"))
+
+
+
+
+
+x %>% 
+
+  filter(state == "ME", wave == 3) %>% 
+
+  
+
+  # Hardest part here is thinking about what to filter out and when to do the
+
+  # filtering. We can see in the NYT results that there is no reported "Don't
+
+  # know" row, so we just get rid of that observation. We also need to ensure
+
+  # that the rows display in the right order.
+
+  
+
+  filter(! likely == "[DO NOT READ] Don't know/Refused") %>% 
+
+  
+
+  mutate(likely = fct_relevel(likely, c("Already voted",
+
+                                        "Almost certain",
+
+                                        "Very likely", 
+
+                                        "Somewhat likely",
+
+                                        "Not very likely",
+
+                                        "Not at all likely"))) %>% 
+
+ 
+
+  group_by(likely, response) %>% 
+
+    
+
+  # Same tricks as in the problem sets and midterm #1.  
+
+  
+
+  tally(wt = final_weight) %>% 
+
+  spread(key = response, value = n, fill = 0) %>% 
+
+  
+
+  # But our weighted tally does not give us the percentages by row. We need to
+
+  # calculate these by hand, first by summing the total weight in each row
+
+  # (which would just be the total number of individuals if this analysis were
+
+  # not weighted) and then dividing each cell by the row sum.
+
+  
+
+  # You need to include the votes for the 3rd party candidates, otherwise your
+
+  # answers are close but not exact. How could you know that? By looking closely
+
+  # at the NYT table and seeing that the rows don't add up to 100. That means
+
+  # that there must be some votes which count in the total, but not for any of
+
+  # the three listed columns.
+
+  
+
+  mutate(all = `3` + `4` + `5` + Dem + Rep + Und) %>%
+
+  
+
+  # I used adorn_pct_formatting from the janitor package to format the percentages.
+
+    
+
+  mutate(Dem = Dem/all,
+
+         Rep = Rep/all,
+
+         Und = Und/all) %>%
+
+  adorn_pct_formatting(digits = 0) %>%
+
+
+
+  
+
+  select(likely, Dem, Rep, Und) %>% 
+
+  kable(caption = "Intention of voting", col.names = c("", "DEM.", "REP.", "UND."))
+
+
+
+# I should use kableExtra and footnote() to add some more information, to color
+
+# some of the cells and so on. But this midterm takes enough time as it is!
+
+  
+
+# We will need a list of all the multiple-wave districts for question 3. It is
+
+# also handy to keep track of which wave their first poll appeared in, because
+
+# we want to get rid of those polls for Question #4. Note that only
+
+# Congressional Districts are polled twice. If this were not true, I might need
+
+# to be more careful.
+
+
+
+# This trick of making a simple tibble, like two_waves, and then using it later
+
+# is very common.
+
+
+
+two_waves <- x %>% 
+
+  group_by(Office) %>% 
+
+  summarize(waves = n_distinct(wave),
+
+            first_wave = min(wave)) %>% 
+
+  filter(waves > 1) 
+
+  
+
+# Note that I name all my code chunks. This is a good idea, especially when
+
+# projects get bigger. Note, also, that I am not throwing in a lot of
+
+# message=FALSE and warning=FALSE code chunk options. Although there are times
+
+# when doing so is necessary, in general, you shoul deal with such issues
+
+# directly --- by fixing them! --- rather than just closing your eyes.
+
+
+
+# We need to restrict our data to just those districts polled twice. Note how
+
+# powerful relational data can be! A single function like semi_join() saves us
+
+# tons of work. If you have not read the relational data chapter in R4DS, read
+
+# it now.
+
+
+
+semi_join(x, two_waves, by = c("Office")) %>% 
+
+  mutate(rep = ifelse(response == "Rep", final_weight, 0)) %>% 
+
+  mutate(dem = ifelse(response == "Dem", final_weight, 0)) %>%
+
+
+
+  # Note that I am dealing with weight in a simpler (?) manner in this question.
+
+  # Whenever I need to deal with weighting, I begin by solving the problem as if
+
+  # everyone has a weight = 1. In this case, I want rep to equal 1 if you are a
+
+  # Republican and zero if you are a Democrat. That way, I can just sum up rep
+
+  # later on if I need to figure out the number of Republicans. That is, the
+
+  # Republican Advantage would just be sum(rep) minus sum(dem) divided by the
+
+  # total number of voters.
+
+  
+
+  # To do that with weights, we just use a person's final_weight in place of the
+
+  # 1. And that is it! The code, and intuition is the same.
+
+  
+
+  group_by(Office, wave) %>% 
+
+  summarize(rep_adv = (sum(rep) - sum(dem)) / n()) %>% 
+
+  spread(wave, rep_adv) %>% 
+
+  
+
+  # All but one district are included in waves 1 and 3. But we still need to
+
+  # deal with PA-1!
+
+  
+
+  mutate(first_poll = ifelse(is.na(`1`), `2`, `1`)) %>% 
+
+  mutate(second_poll = `3`) %>% 
+
+  mutate(change = second_poll - first_poll) %>% 
+
+
+
+  # ungroup() is an important trick. by_group()'ing is powerful, but a grouped
+
+  # tibble can behave in strange ways. ungroup()'ing often solves that, and
+
+  # rarely does any damage.
+
+  
+
+  ungroup() %>% 
+
+  
+
+  # Now we just organize, prettify and print. Again, using kableExtra would
+
+  # provide some nice options.
+
+  
+
+  select(Office, first_poll, second_poll, change) %>% 
+
+  arrange(desc(change)) %>% 
+
+  filter(abs(change) > 0.07) %>% 
+
+  adorn_pct_formatting(digits = 0) %>% 
+
+  
+
+  kable(caption = "Change in Republican Advantage in Districts with Major Swings", 
+
+        col.names = c("District", "Poll 1", "Poll 2", "Change"))
+
+  
+
+# Note that we are doing everything by Office rather than District because we need
+
+# all races. Also, we need to only get the second poll in those cases with two
+
+# waves. This is why it is nice to create the first_wave variable in the
+
+# two_waves tibble because it tells us all the polls we can get rid of. Note the
+
+# use of anti_join.
+
+
+
+# The second poll in all 30 of those districts occurs in wave 3, but our code (I
+
+# hope!) does not depend on that fact. You don't often get a chance to use
+
+# anti_join() in actual production code.
+
+
+
+forecasts <- anti_join(x, two_waves, 
+
+                       by = c("Office" = "Office", "wave" = "first_wave")) %>% 
+
+  
+
+  # If I were cool, I would have a function that calculates Republican
+
+  # Advantage. But I am not cool, so I just use the same code here as above.
+
+  
+
+  mutate(rep = ifelse(response == "Rep", final_weight, 0)) %>% 
+
+  mutate(dem = ifelse(response == "Dem", final_weight, 0)) %>%
+
+  group_by(Office, office) %>% 
+
+  summarize(rep_adv = (sum(rep) - sum(dem)) / n()) 
+
+
+
+# Now I need to get the actual election results from Jack Schroeder's handy csv.
+
+# Thanks Mr. Schroeder! Although you did force us to take care in reading in the
+
+# data . . .
+
+
+
+# Note that this is the second "block" of code in this code chunk. Nothing wrong
+
+# with that, but I need to pay attention to each assignment step.
+
+
+
+results <- read_csv("mt_2_results.csv") %>% 
+
+  
+
+  # I need a district number which is an integer to match with my Office
+
+  # variable. That is, I have PA-1, not PA-01. (Which is preferrred?) Dealing
+
+  # with the non-House races explicitly avoids ugly warnings/errors. Am I sure
+
+  # that Upshot did not poll any AL (at large) races?
+
+  
+
+  mutate(district_number = parse_integer(district, na = c("AL", "sen", "gov"))) %>% 
+
+  mutate(district_office = case_when(str_detect(district, "sen") ~ "SEN",
+
+                                     str_detect(district, "gov") ~ "GOV",
+
+                                     TRUE ~ NA_character_)) %>% 
+
+  mutate(Office = ifelse(is.na(district_number), 
+
+                         paste(state, district_office, sep = "-"),
+
+                         paste(state, district_number, sep = "-")))
+
+
+
+# In production code, we would do a bunch more error checking.
+
+
+
+stopifnot(all(forecasts$Office %in% results$Office))
+
+
+
+# Two more code blocks. The first creates the data for the Shiny App and the
+
+# second writes it out to a file which the Shiny App can just read in.
+
+
+
+shiny_data <- left_join(forecasts, results, by = "Office") %>% 
+
+  mutate(result = (rep_votes - dem_votes) / (rep_votes + dem_votes + other_votes)) %>% 
+
+  rename(forecast = rep_adv) %>% 
+
+  select(Office, office, state, forecast, result, win_name, win_party)
+
+
+
+write_rds(shiny_data, "mt_2_app/shiny_data.rds")
+```
+
