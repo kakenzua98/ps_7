@@ -64,11 +64,11 @@ dem_polling <- polling_data %>%
   filter(wave %in% c("2","3")) %>% 
   rename(district = District) %>% 
   filter(district != "pa01") %>% 
-  filter(!(response %in% c("3","4","5","6"))) %>% 
+  #filter(!(response %in% c("3","4","5","6"))) %>% 
   group_by(district, response) %>% 
   tally(wt = final_weight) %>% 
-  spread(key = response, value = n) %>% 
-  mutate(dem_margin = Dem / (Dem+Rep+Und)) %>% 
+  spread(key = response, value = n, fill = 0) %>% 
+  mutate(dem_margin = Dem / (Dem+Rep+`3`+`4`+`5`+`6`)) %>% 
   select(district, dem_margin)
 
 
@@ -111,14 +111,7 @@ black_voters <- full_data %>%
   left_join(dem_polling, by = "district") %>% 
   filter(!is.na(dem_win)) %>% 
   filter(!is.na(dem_margin)) %>% 
-  mutate(dem_error = dem_win - dem_margin) 
-  
-
-
-black_voters %>% 
-  ggplot(aes(x = black_hs, y = dem_win)) + geom_jitter()
-
-write_rds(black_voters, "ps_7_app/black_voters.rds")
+  mutate(dem_error = (dem_win - dem_margin)*100) 
 
 hisp_voters <- full_data %>% 
   filter(race_eth == "Hispanic") %>% 
@@ -126,15 +119,18 @@ hisp_voters <- full_data %>%
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
   clean_names() %>% 
+  mutate(total = hispanic_college_grad + hispanic_hs + hispanic_postgrad + hispanic_some_college) %>% 
+  filter(!is.na(total)) %>% 
+  mutate(hispanic_college_grad = (hispanic_college_grad / total)*100) %>% 
+  mutate(hispanic_hs = (hispanic_hs / total)*100) %>% 
+  mutate(hispanic_postgrad = (hispanic_postgrad / total)*100) %>% 
+  mutate(hispanic_some_college = (hispanic_some_college / total)*100) %>% 
   left_join(dem_win, by = "district") %>% 
-  filter(!is.na(type)) 
+  left_join(dem_polling, by = "district") %>% 
+  filter(!is.na(dem_win)) %>% 
+  filter(!is.na(dem_margin)) %>% 
+  mutate(dem_error = (dem_win - dem_margin)*100) 
 
-#hisp_voters <- na.omit(hisp_voters)
-
-hisp_voters %>% 
-  ggplot(aes(x = hispanic_hs, y = dem_win)) + geom_jitter()
-
-hisp_voters
 
 asian_voters <- full_data %>% 
   filter(race_eth == "Asian") %>% 
@@ -142,10 +138,18 @@ asian_voters <- full_data %>%
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
   clean_names() %>% 
+  mutate(total = asian_college_grad + asian_hs + asian_postgrad + asian_some_college) %>% 
+  filter(!is.na(total)) %>% 
+  mutate(asian_college_grad = (asian_college_grad / total)*100) %>% 
+  mutate(asian_hs = (asian_hs / total)*100) %>% 
+  mutate(asian_postgrad = (asian_postgrad / total)*100) %>% 
+  mutate(asian_some_college = (asian_some_college / total)*100) %>% 
   left_join(dem_win, by = "district") %>% 
-  filter(!is.na(type)) 
+  left_join(dem_polling, by = "district") %>% 
+  filter(!is.na(dem_win)) %>% 
+  filter(!is.na(dem_margin)) %>% 
+  mutate(dem_error = (dem_win - dem_margin)*100) 
 
-asian_voters <- na.omit(asian_voters)
 
 white_voters <- full_data %>% 
   filter(race_eth == "White") %>% 
@@ -153,10 +157,19 @@ white_voters <- full_data %>%
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
   clean_names() %>% 
+  mutate(total = white_college_grad + white_hs + white_postgrad + white_some_college) %>% 
+  filter(!is.na(total)) %>% 
+  mutate(white_college_grad = (white_college_grad / total)*100) %>% 
+  mutate(white_hs = (white_hs / total)*100) %>% 
+  mutate(white_postgrad = (white_postgrad / total)*100) %>% 
+  mutate(white_some_college = (white_some_college / total)*100) %>% 
   left_join(dem_win, by = "district") %>% 
-  filter(!is.na(type)) 
+  left_join(dem_polling, by = "district") %>% 
+  filter(!is.na(dem_win)) %>% 
+  filter(!is.na(dem_margin)) %>% 
+  mutate(dem_error = (dem_win - dem_margin)*100) 
 
-white_voters <- na.omit(white_voters)
+
 
 other_voters <- full_data %>% 
   filter(race_eth == "Other") %>% 
@@ -164,10 +177,18 @@ other_voters <- full_data %>%
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
   clean_names() %>% 
+  mutate(total = other_college_grad + other_hs + other_postgrad + other_some_college) %>% 
+  filter(!is.na(total)) %>% 
+  mutate(other_college_grad = (other_college_grad / total)*100) %>% 
+  mutate(other_hs = (other_hs / total)*100) %>% 
+  mutate(other_postgrad = (other_postgrad / total)*100) %>% 
+  mutate(other_some_college = (other_some_college / total)*100) %>% 
   left_join(dem_win, by = "district") %>% 
-  filter(!is.na(type)) 
+  left_join(dem_polling, by = "district") %>% 
+  filter(!is.na(dem_win)) %>% 
+  filter(!is.na(dem_margin)) %>% 
+  mutate(dem_error = (dem_win - dem_margin)*100) 
 
-other_voters <- na.omit(other_voters)
 
 all_voters <- black_voters %>% 
   left_join(white_voters, by = "district") %>% 
@@ -175,8 +196,12 @@ all_voters <- black_voters %>%
   left_join(asian_voters, by = "district") %>% 
   left_join(other_voters, by = "district") 
 
-all_voters <- na.omit(all_voters)
 
+write_rds(black_voters, "ps_7_app/black_voters.rds")
+write_rds(asian_voters, "ps_7_app/asian_voters.rds")
+write_rds(hisp_voters, "ps_7_app/hisp_voters.rds")
+write_rds(white_voters, "ps_7_app/white_voters.rds")
+write_rds(other_voters, "ps_7_app/other_voters.rds")
 
 write_rds(all_voters, "ps_7_app/all_voters.rds")
 
