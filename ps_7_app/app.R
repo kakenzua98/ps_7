@@ -11,6 +11,8 @@ library(tidyverse)
 library(shiny)
 
 black_voters <- read_rds("black_voters.rds")
+black_voters <- na.omit(black_voters)
+
 all_voters <- read_rds("all_voters.rds")
 
 # Define UI for application that draws a histogram
@@ -24,18 +26,26 @@ ui <- fluidPage(
     sidebarPanel(
        selectInput(inputId = "educ",
                    label = "Education:",
-                   choices = c("college_grad",
-                              "hs",
-                              "postgrad",
-                              "some_college"),
-                   selected = "hs"),
+                   choices = c("Postgraduate Studies" = "black_postgrad",
+                               "College Graduate" = "black_college_grad",
+                               "Some College" = "black_some_college", 
+                               "High School or Less" = "black_hs"),
+                   selected = "black_postgrad"),
        selectInput(inputId = "race",
                    label = "Race:",
-                   choices = c("black",
-                               "hisp",
-                               "white",
-                               "other"),
-                   selected = "black"),
+                   choices = c("Asian",
+                               "Black",
+                               "Hispanic", 
+                               "White",
+                               "Other"),
+                   selected = "black_postgrad"),
+       # selectInput(inputId = "race",
+       #             label = "Education:",
+       #             choices = c("Black" = "black",
+       #                         "Hispanic" = "hisp",
+       #                         "Asian" = "asian", 
+       #                         "White" = "white"),
+       #             selected = "black"),
       checkboxInput(inputId = "line", 
                     label = "Show Best Fit Line", 
                     value = FALSE)
@@ -57,29 +67,43 @@ server <- function(input, output) {
   
   output$distPlot <- renderPlot({
     
-
+    # all_plot <- all_voters %>% 
+    #   #filter(!is.na(input$type)) %>% 
+    #   ggplot(aes_string(x = paste(input$race, input$educ, sep = ""), y = "dem_error")) + geom_point() + ylab("Dem Error")
     
-    # Filter type based on input$type from ui.R
-    # I use the type of election, as selected by the user, to filter which election polls/results are shown.
-    # I go through the motion of a ggplot by setting labels, titles, etc. to useful/descriptive text. 
-    
-   #if(input$eth == "Black") {
-      
-      all_plot <- all_voters %>% 
+    if(input$race == "Black") {
+       black_plot <- black_voters %>% 
         #filter(!is.na(input$type)) %>% 
-        ggplot(aes_string(x = paste(input$race, input$educ, sep = "_"), y = "dem_win")) + geom_point() + ylab("Dem Win")
-      
-      #black_plot <- black_voters %>% 
-      #  filter(!is.na(black_college_grad)) %>% 
-      #  ggplot(aes(x = black_college_grad, y = dem_win)) + geom_point() + ylab("Dem Win")
+        ggplot(aes_string(x = input$educ, y = "dem_error")) + geom_point() + ylab("Dem Error")
       
       if (input$line == TRUE) {
-        all_plot <- all_plot + geom_smooth(method = lm, se = FALSE)
+        black_plot <- black_plot + geom_smooth(method = lm, se = FALSE)
       }
       
-      all_plot
+      black_plot
+    }
+    
+    else if(input$race == "Asian") {
       
-    #}
+    }
+    
+    else if(input$race == "Hispanic") {
+      
+    }
+    
+    else if(input$race == "White") {
+      
+    }
+    
+    else if(input$race == "Other") {
+      
+    }
+    
+    
+    
+   
+      
+    
     
     
     })
