@@ -101,12 +101,17 @@ black_voters <- full_data %>%
   spread(key = race_educ5, value = n) %>% 
   # NOT CERTAIN WHAT THE VALUES HERE ACTUALLY ARE
   clean_names() %>% 
+  mutate(total = black_college_grad + black_hs + black_postgrad + black_some_college) %>% 
+  filter(!is.na(total)) %>% 
+  mutate(black_college_grad = (black_college_grad / total)*100) %>% 
+  mutate(black_hs = (black_hs / total)*100) %>% 
+  mutate(black_postgrad = (black_postgrad / total)*100) %>% 
+  mutate(black_some_college = (black_some_college / total)*100) %>% 
   left_join(dem_win, by = "district") %>% 
   left_join(dem_polling, by = "district") %>% 
   filter(!is.na(dem_win)) %>% 
   filter(!is.na(dem_margin)) %>% 
-  mutate(dem_error = dem_win - dem_margin) %>% 
-  mutate(dem_erro)
+  mutate(dem_error = dem_win - dem_margin) 
   
 
 
