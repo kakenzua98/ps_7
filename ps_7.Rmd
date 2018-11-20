@@ -23,6 +23,7 @@ library(tibble)
 library(purrr)
 library(ggplot2)
 
+# *****may want to create a variable that's like dem_adv - dem_win to adhere to prompt*****
 
 dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>% 
   clean_names() %>% 
@@ -36,6 +37,8 @@ dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>%
   filter(!is.na(dem_win))
 
 
+
+
 download.file(url = "https://goo.gl/ZRCBda",
               destfile = "upshot.zip", 
               quiet = TRUE,
@@ -44,8 +47,9 @@ download.file(url = "https://goo.gl/ZRCBda",
 unzip("upshot.zip") 
 
 file_names <- dir_ls("2018-live-poll-results-master/data/")
+polling_data <- map_dfr(file_names, read_csv, .id = "source")
 
-prediction_data <- map_dfr(file_names, read_csv, .id = "source") %>% 
+prediction_data <- polling_data %>% 
   mutate(source = str_replace(source, "2018-live-poll-results-master/data/elections-poll-","\\")) %>% 
   mutate(source = str_replace(source, ".csv","\\")) %>% 
   separate(source, c("role","wave"), "-") %>% 
@@ -79,7 +83,7 @@ black_voters <- full_data %>%
 black_voters %>% 
   ggplot(aes(x = black_hs, y = dem_win)) + geom_jitter()
 
-black_voters
+write_rds(black_voters, "ps_7_app/black_voters.rds")
 
 hisp_voters <- full_data %>% 
   filter(race_eth == "Hispanic") %>% 
