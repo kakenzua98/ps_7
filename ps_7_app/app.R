@@ -93,7 +93,10 @@ ui <- fluidPage(
       h4("White:"),
       p("Amidst white respondents, prediction error increases as the following education groups increase: postgraduates, college graduates, and some college. For whites with high school or less, the prediction error decreases and dips slightly below 0. "),
       h4("Other:"),
-      p("For respondents that did not fall into any of the previous ethnic identities, the prediction error decreases as the percentage of respondents with a high school (or less) education or a college education rise. For the former, there is a large decrease and prediction error falls to -2.5%. For Other respondents with a postgraduate education or some college education, prediction error rises with the percentage of the respective education groups.")
+      p("For respondents that did not fall into any of the previous ethnic identities, the prediction error decreases as the percentage of respondents with a high school (or less) education or a college education rise. For the former, there is a large decrease and prediction error falls to -2.5%. For Other respondents with a postgraduate education or some college education, prediction error rises with the percentage of the respective education groups."),
+      br(),
+      h5("Source of Data:"),
+      p("Upshot/Sienna Polls and Mr. Schroeder")
       
     )
   )
@@ -119,8 +122,8 @@ server <- function(input, output) {
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + 
          geom_point() + 
          ylab("Prediction Error in Democrat Votes (%)") + 
-         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "+", 
-                      names(education_choices[which(education_choices == input$educ)]), "(%)"))) +
+         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "with", 
+                      names(education_choices[which(education_choices == input$educ)]), "Education (%)"))) +
          guides(color=guide_legend("Polling Error (%)")) +
          ggtitle("The percentage of Blacks with varying education levels \ncompared to errors in polling predictions")
       
