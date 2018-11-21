@@ -1,0 +1,12 @@
+name: ps_7_app
+title: ps_7_app
+username:
+account: kemi-a
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 582236
+bundleId: 1713036
+url: https://kemi-a.shinyapps.io/ps_7_app/
+when: 1542809557.52308
+asMultiple: FALSE
+asStatic: FALSE

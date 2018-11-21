@@ -38,7 +38,7 @@ race_choices <- c("Asian" = "asian",
 ui <- fluidPage(
   
   # Application title
-  titlePanel("Race/Education in the election"),
+  titlePanel("The relationship between Race/Education and Errors in Polling Predictions"),
   
   
   sidebarLayout(
@@ -79,19 +79,21 @@ ui <- fluidPage(
     mainPanel(
       plotOutput("distPlot"), 
       br(),
+      h3("Calculation Details"),
+      p("Prediction Error in Democrat Votes (%) is calculated by subtracting the Democratic Share of Votes as predicted by the last wave of Upshot/Sienna Polls by the Democratic Share of Votes in the actual election."),
+      p("The x-axis measures the percentage of each education response in the selected ethnic group. For example, 'Asian with Some College Education' measures the share of respondents with Some College Education from the group of respondents that identified as Asian. The percentages are not based off of all respondents but, instead, the respondents in their ethnic group"),
+      br(),
       h3("Summary:"),
       h4("Asian:"),
-      p("[will paste from google docs later]"),
+      p("Error in polling predictions for Democratic Advantage seems to increase as the percentage of Asian respondents with less than a college degree increase. The share of Democratic votes was higher than the polling suggested. On the other hand, an increase in the share of Asian respondents with a college or postgraduate degree led to a decrease in prediction error. Another interesting takeaway is that most of the districts shown have two times (or more) the number of Asian respondents with a completed college education than Asian respondents with a high school education (or less). "),
       h4("Black:"),
-      p("[will paste from google docs later]"),
+      p("Amidst black respondent, the prediction error in relation to % of blacks with some college education and blacks with postgraduate educations were relatively similar. There was, however, a slight increase in prediction error as the percentage of black respondents with a postgraduate degree increase. There is a much larger difference in prediction error between black respondents with a completed college degree and those with a high school education or less. Generally, a higher percentage of blacks with a college degree led to a high prediction error with Democrats winning more votes than predicted. As the number of black respondents with a high school or less education increased, the prediction error decreased; this is also very different from the prediction for Asian with a high school education or less."),
       h4("Hispanic:"),
-      p("[will paste from google docs later]"),
+      p("Differences in the education level of Hispanic voters had a smaller effect than it did amidst other ethnicities shown. The primary takeaways here is that prediction error slightly decreases as the percent of Hispanic respondents with a college education increases. On the other hand, predict error increases as the percentage of Hispanic voters with some college education increases. The prediction error for Hispanics with a Postgraduate degree and those with High School or less show little change in prediction error as the percent for that education bloc changes."),
       h4("White:"),
-      p("[will paste from google docs later]"),
+      p("Amidst white respondents, prediction error increases as the following education groups increase: postgraduates, college graduates, and some college. For whites with high school or less, the prediction error decreases and dips slightly below 0. "),
       h4("Other:"),
-      p("[will paste from google docs later]"),
-      h4("Final Thoughts:"),
-      p("[will paste from google docs later]")
+      p("For respondents that did not fall into any of the previous ethnic identities, the prediction error decreases as the percentage of respondents with a high school (or less) education or a college education rise. For the former, there is a large decrease and prediction error falls to -2.5%. For Other respondents with a postgraduate education or some college education, prediction error rises with the percentage of the respective education groups.")
       
     )
   )
@@ -116,10 +118,11 @@ server <- function(input, output) {
        black_plot <- black_voters %>% 
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + 
          geom_point() + 
-         ylab("Dem Error") + 
+         ylab("Prediction Error in Democrat Votes (%)") + 
          xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "+", 
                       names(education_choices[which(education_choices == input$educ)]), "(%)"))) +
-         guides(color=guide_legend("Democrat Error"))
+         guides(color=guide_legend("Polling Error (%)")) +
+         ggtitle("The percentage of Blacks with varying education levels \ncompared to errors in polling predictions")
       
       # The data before before the plot is printed changes based on the checkboxInput in the UI
       # If the checkbox is selected, the input$inputId is set to TRUE and the plot is updated accordingly
@@ -150,10 +153,11 @@ server <- function(input, output) {
       asian_plot <- asian_voters %>% 
         #filter(!is.na(input$type)) %>% 
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + geom_point() + 
-        ylab("Dem Error") + 
+        ylab("Prediction Error in Democrat Votes (%)") + 
         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "with", 
                      names(education_choices[which(education_choices == input$educ)]), "Education (%)"))) +
-        guides(color=guide_legend("Democrat Error"))
+        guides(color=guide_legend("Polling Error (%)")) +
+        ggtitle("The percentage of Asians with varying education levels \ncompared to errors in polling predictions")
       
       # The data before before the plot is printed changes based on the checkboxInput in the UI
       # If the checkbox is selected, the input$inputId is set to TRUE and the plot is updated accordingly
@@ -186,10 +190,11 @@ server <- function(input, output) {
       hisp_plot <- hisp_voters %>% 
         #filter(!is.na(input$type)) %>% 
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + geom_point() + 
-        ylab("Dem Error") + 
+        ylab("Prediction Error in Democrat Votes (%)") + 
         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "with", 
                      names(education_choices[which(education_choices == input$educ)]), "Education (%)"))) +
-        guides(color=guide_legend("Democrat Error"))
+        guides(color=guide_legend("Polling Error (%)")) +
+        ggtitle("The percentage of Hispanics with varying education levels \ncompared to errors in polling predictions")
       
       # The data before before the plot is printed changes based on the checkboxInput in the UI
       # If the checkbox is selected, the input$inputId is set to TRUE and the plot is updated accordingly
@@ -220,10 +225,11 @@ server <- function(input, output) {
       white_plot <- white_voters %>% 
         #filter(!is.na(input$type)) %>% 
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + geom_point() + 
-        ylab("Dem Error") + 
+        ylab("Prediction Error in Democrat Votes (%)") + 
         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "with", 
                      names(education_choices[which(education_choices == input$educ)]), "Education (%)")))+
-        guides(color=guide_legend("Democrat Error"))
+        guides(color=guide_legend("Polling Error (%)")) +
+        ggtitle("The percentage of Whites with varying education levels \ncompared to errors in polling predictions")
       
       # The data before before the plot is printed changes based on the checkboxInput in the UI
       # If the checkbox is selected, the input$inputId is set to TRUE and the plot is updated accordingly
@@ -255,10 +261,11 @@ server <- function(input, output) {
         #filter(!is.na(input$type)) %>% 
         ggplot(aes_string(x = paste(input$race,input$educ, sep = "_"), y = "dem_error", color = "dem_error")) + 
         geom_point() + 
-        ylab("Dem Error") + 
+        ylab("Prediction Error in Democrat Votes (%)") + 
         xlab(c(paste(names(race_choices[which(race_choices == input$race)]), "with", 
              names(education_choices[which(education_choices == input$educ)]), "Education (%)"))) +
-        guides(color=guide_legend("Democrat Error"))
+        guides(color=guide_legend("Polling Error (%)")) +
+        ggtitle("The percentage of Other with varying education levels \ncompared to errors in polling predictions")
       
       # The data before before the plot is printed changes based on the checkboxInput in the UI
       # If the checkbox is selected, the input$inputId is set to TRUE and the plot is updated accordingly
