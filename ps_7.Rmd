@@ -23,7 +23,11 @@ library(tibble)
 library(purrr)
 library(ggplot2)
 
-# *****may want to create a variable that's like dem_adv - dem_win to adhere to prompt*****
+# First, I need to automate the process of reading in the data for all the tables I'm using. 
+# We use download.file so we can download the data from the internet, rather than holding an excel file in the project.
+# For download.file's argumentsm destfile is set to upshot.zip because that is the name for where the downloaded file is saved and mode is set to wb which means binary
+# We then use unzip to to get files out from the zip archive we just downloaded.
+# I then used read_csv to read in the data from the csv file that we got after unzipping upshot.zip
 
 download.file(url = "https://goo.gl/ZRCBda",
               destfile = "upshot.zip", 
@@ -32,20 +36,42 @@ download.file(url = "https://goo.gl/ZRCBda",
 
 unzip("upshot.zip") 
 
+# I first use dir_ls to get the fs_path character vector of 2018-live-poll-results-master/data/ and set that equal to file_names.
+# Since I want to analyze all my data from 2018-live-poll-results-master/data/ together, I use map_dfr from the purrr pacakage. 
+# Map_dfr binds all the dataframes by rows and columns. 
+# Now I have my data for the polls in the dataframe called polling_data
+
 file_names <- dir_ls("2018-live-poll-results-master/data/")
 polling_data <- map_dfr(file_names, read_csv, .id = "source")
 
+
+# I read in the csv file and cleaned and funky names with the clean_names function. 
+# I then select on the variables I need and rename the variable that is not descriptive to district. 
 
 dem_win <- read_excel("rmd_data/mt_2_ps.xlsx") %>% 
   clean_names() %>% 
   select(x_1, dem_votes, rep_votes, other_votes, type) %>% 
   rename(district = x_1) %>% 
   mutate(district = tolower(district)) %>% 
+  
+# I then calculate dem_win to be the number of democratic votes divided by the total number of votes in the results data
+# I select the 3 columns I'll need and remove all entries related to Senate or Gubernatorial races
+# I then filter out any NAs in dem_win to ensure future calculations won't be thrown off
+  
   mutate(dem_win = (dem_votes)/(rep_votes+dem_votes+other_votes)) %>% 
   select(district, dem_win, type) %>% 
   filter(type != "Senate") %>% 
   filter(type != "Governor") %>% 
   filter(!is.na(dem_win))
+
+# I create a separate dataframe to analyze the polling data 
+# I select the 3 columns I'll need then cleaned the column values 
+# Source needs to be broken down from being the file path to eventually being district, wave, and office respectively
+# I use mutate and functions from the stringr package to extract information from the source variable
+# Though I completed this process in my midterm, the solutions from midterm two had a much shorter and clearer way to break 
+# down the source variably. I used some of that code here. 
+# Once office has been broken down with str_detect, I remove all entries related to Senate or Gubernatorial races
+# 
 
 dem_polling <- polling_data %>% 
   select(source, response, final_weight) %>% 
@@ -57,6 +83,20 @@ dem_polling <- polling_data %>%
                             TRUE ~ "HSE")) %>% 
   filter(office != "SEN") %>% 
   filter(office != "GOV") %>% 
+  
+# I continue to str_extract to break down the long source variable.
+# Here, similar to the code above, I use the pattern argument of str_extract so the function know what pattern to look for
+# as it extracts info for new columns. 
+# I select the variables I need: District, response, final_weight, wave
+# There were previously two districts. One represented just the district number and the second was the state and number pasted 
+# together. Now that I no longer need the district that is solely the number, I can rename the District to being district.
+# I filter the wave to being just 2 and 3 since I want to look at the most recent polling 
+# I filter out pa01 since it did not have any polls in wave 1. I could've account for this with a function or if statement, but
+# but the purpose of the graphic eventually shown is still excecutable without pa01. 
+# I then groued the data by district and response.
+# I piped my grouped likely and response into tally to which calls sum() on the groups and accounted the differences in weighting.
+
+
   mutate(district = str_extract(source, pattern = "[\\d]{2}-[\\d].csv$")) %>% 
   mutate(district = str_sub(district, 1, 2)) %>% 
   mutate(District = paste(state, district, sep = "")) %>%  
@@ -64,15 +104,26 @@ dem_polling <- polling_data %>%
   filter(wave %in% c("2","3")) %>% 
   rename(district = District) %>% 
   filter(district != "pa01") %>% 
-  #filter(!(response %in% c("3","4","5","6"))) %>% 
   group_by(district, response) %>% 
   tally(wt = final_weight) %>% 
+  
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.I set fill to 0 
+# to avoid any NAs
+# I create the dem_margin variable to represent what percent of the poll responses Dem got. I initially did not include 
+# the third parties but that was a mistake since they are part of the responses.
+  
   spread(key = response, value = n, fill = 0) %>% 
   mutate(dem_margin = Dem / (Dem+Rep+`3`+`4`+`5`+`6`)) %>% 
   select(district, dem_margin)
 
 
-  
+# I want to look at race coupled with education. I first clean the polling_data in a slightly different method than shown above.
+# After that, I filter out any Don't Know/Refused from my race and education data
+# I used race_eth and educ4, respectively, because they both had more extensive values than similar variables. For example, 
+# race_edu largely looks at white, nonwhite, and other rather than specific ethnicities
+# I educ4 so that the values have the shortest text possible. This will make it easier when I spread and the values of 
+# educ4 become column names
+# I then paste race_eth and educ4
 
 prediction_data <- polling_data %>% 
   mutate(source = str_replace(source, "2018-live-poll-results-master/data/elections-poll-","\\")) %>% 
@@ -87,19 +138,28 @@ prediction_data <- polling_data %>%
                            educ4 == "High School Grad. or Less" ~ "HS")) %>% 
   mutate(race_educ5 = paste(race_eth, educ4, sep = ", ")) %>% 
   rename(district = role)
-  
+
+# This dataset was initially to do more extensive data manipulation and calculation, but now just joins with 
+# dem_win and filters out any leftover NAs in type
+
 full_data <- prediction_data %>%   
   left_join(dem_win, by = "district") %>% 
   filter(!is.na(type)) 
-  # is this calculation necessary or correct?
+
  
+# In each ethnicity dataframe, I first filter the data from full_data to only the ethnicity of that df
+# The, I group by district and race_educ5
+# I piped my grouped district and race_educ5 into tally to which calls sum() on the groups and accounted the differences in weighting. 
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.
+# I clean names so that I do not have any commas, capital letters, etc. in my column names
+# I create a new column for total and then use that new column to reset each new race/education column to being it's percentage of the overall group. 
+# I then left_join the column with dem_win, dem_margin, then calculate the dem_error from subratracting the two
 
 black_voters <- full_data %>% 
   filter(race_eth == "Black") %>% 
   group_by(district, race_educ5) %>% 
   tally(wt = final_weight) %>% 
   spread(key = race_educ5, value = n) %>% 
-  # NOT CERTAIN WHAT THE VALUES HERE ACTUALLY ARE
   clean_names() %>% 
   mutate(total = black_college_grad + black_hs + black_postgrad + black_some_college) %>% 
   filter(!is.na(total)) %>% 
@@ -112,6 +172,14 @@ black_voters <- full_data %>%
   filter(!is.na(dem_win)) %>% 
   filter(!is.na(dem_margin)) %>% 
   mutate(dem_error = (dem_win - dem_margin)*100) 
+
+# In each ethnicity dataframe, I first filter the data from full_data to only the ethnicity of that df
+# The, I group by district and race_educ5
+# I piped my grouped district and race_educ5 into tally to which calls sum() on the groups and accounted the differences in weighting. 
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.
+# I clean names so that I do not have any commas, capital letters, etc. in my column names
+# I create a new column for total and then use that new column to reset each new race/education column to being it's percentage of the overall group. 
+# I then left_join the column with dem_win, dem_margin, then calculate the dem_error from subratracting the two
 
 hisp_voters <- full_data %>% 
   filter(race_eth == "Hispanic") %>% 
@@ -131,6 +199,13 @@ hisp_voters <- full_data %>%
   filter(!is.na(dem_margin)) %>% 
   mutate(dem_error = (dem_win - dem_margin)*100) 
 
+# In each ethnicity dataframe, I first filter the data from full_data to only the ethnicity of that df
+# The, I group by district and race_educ5
+# I piped my grouped district and race_educ5 into tally to which calls sum() on the groups and accounted the differences in weighting. 
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.
+# I clean names so that I do not have any commas, capital letters, etc. in my column names
+# I create a new column for total and then use that new column to reset each new race/education column to being it's percentage of the overall group. 
+# I then left_join the column with dem_win, dem_margin, then calculate the dem_error from subratracting the two. 
 
 asian_voters <- full_data %>% 
   filter(race_eth == "Asian") %>% 
@@ -150,6 +225,13 @@ asian_voters <- full_data %>%
   filter(!is.na(dem_margin)) %>% 
   mutate(dem_error = (dem_win - dem_margin)*100) 
 
+# In each ethnicity dataframe, I first filter the data from full_data to only the ethnicity of that df
+# The, I group by district and race_educ5
+# I piped my grouped district and race_educ5 into tally to which calls sum() on the groups and accounted the differences in weighting. 
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.
+# I clean names so that I do not have any commas, capital letters, etc. in my column names
+# I create a new column for total and then use that new column to reset each new race/education column to being it's percentage of the overall group. 
+# I then left_join the column with dem_win, dem_margin, then calculate the dem_error from subratracting the two
 
 white_voters <- full_data %>% 
   filter(race_eth == "White") %>% 
@@ -169,7 +251,13 @@ white_voters <- full_data %>%
   filter(!is.na(dem_margin)) %>% 
   mutate(dem_error = (dem_win - dem_margin)*100) 
 
-
+# In each ethnicity dataframe, I first filter the data from full_data to only the ethnicity of that df
+# The, I group by district and race_educ5
+# I piped my grouped district and race_educ5 into tally to which calls sum() on the groups and accounted the differences in weighting. 
+# I used spread to create key value pairs between response and n. This works to tidy the currently messy rows.
+# I clean names so that I do not have any commas, capital letters, etc. in my column names
+# I create a new column for total and then use that new column to reset each new race/education column to being it's percentage of the overall group. 
+# I then left_join the column with dem_win, dem_margin, then calculate the dem_error from subratracting the two
 
 other_voters <- full_data %>% 
   filter(race_eth == "Other") %>% 
@@ -189,6 +277,9 @@ other_voters <- full_data %>%
   filter(!is.na(dem_margin)) %>% 
   mutate(dem_error = (dem_win - dem_margin)*100) 
 
+# I created this dataframe in an attempt to avoid repetition once I realized I did not want to look at solely Black respondents. 
+# I was not able to seamlessly pivot from just black_voters and use all_voters in time for submission, but I still have it here for myself to possibly use and work on.
+# It joins all the ethnicity dataframes by district.
 
 all_voters <- black_voters %>% 
   left_join(white_voters, by = "district") %>% 
@@ -196,7 +287,7 @@ all_voters <- black_voters %>%
   left_join(asian_voters, by = "district") %>% 
   left_join(other_voters, by = "district") 
 
-
+# I used write_rds from the readr package to create paths to the data I've just manipulated and cleaned. I'll use these paths in my Shiny App later.
 write_rds(black_voters, "ps_7_app/black_voters.rds")
 write_rds(asian_voters, "ps_7_app/asian_voters.rds")
 write_rds(hisp_voters, "ps_7_app/hisp_voters.rds")
