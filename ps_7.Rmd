@@ -1,9 +1,10 @@
 ---
-title: "ps_7"
+title: "Problem Set 7"
+author: "Kemi Akenzua"
 output: html_document
 ---
 
-```{r}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE)
 library(tidyverse)
 library(stringr)
@@ -299,4 +300,6 @@ write_rds(all_voters, "ps_7_app/all_voters.rds")
 
 
 ```
-
+* Github link: https://github.com/kakenzua98/ps_7
+* Shiny App Link: https://kemi-a.shinyapps.io/ps_7_app/ 
+* Thanks to: Nick, Albert, Mr. Schroeder's repo (for district label help) and Ms. Gayton's repo (for best fit line help)
